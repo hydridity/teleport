@@ -17,6 +17,10 @@ limitations under the License.
 package types
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gravitational/teleport/api/defaults"
@@ -26,6 +30,8 @@ import (
 
 	"github.com/gravitational/trace"
 )
+
+const githubOrgsURL = "https://github.com/orgs"
 
 // GithubConnector defines an interface for a Github OAuth2 connector
 type GithubConnector interface {
@@ -53,6 +59,9 @@ type GithubConnector interface {
 	GetTeamsToRoles() []TeamRolesMapping
 	// SetTeamsToRoles sets the mapping of Github teams to allowed roles
 	SetTeamsToRoles([]TeamRolesMapping)
+	// CheckExternalSSO returns an error if any of the Github organizations
+	// specified in this connector use external SSO
+	CheckExternalSSO() error
 	// MapClaims returns the list of allows logins based on the retrieved claims
 	// returns list of logins and kubernetes groups
 	MapClaims(GithubClaims) (roles []string, kubeGroups []string, kubeUsers []string)
@@ -247,6 +256,38 @@ func (c *GithubConnectorV3) SetDisplay(display string) {
 	c.Spec.Display = display
 }
 
+// CheckExternalSSO returns an error if any of the Github organizations
+// specified in this connector use external SSO
+func (c *GithubConnectorV3) CheckExternalSSO() error {
+	for _, mapping := range c.GetTeamsToLogins() {
+		usesSSO, err := checkOrgExternalSSO(mapping.Organization)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		if usesSSO {
+			return trace.AccessDenied(
+				"Github organization %s uses external SSO, please purchase a Teleport Enterprise license if you want to authenticate with this organization",
+				mapping.Organization,
+			)
+		}
+	}
+
+	for _, mapping := range c.GetTeamsToRoles() {
+		usesSSO, err := checkOrgExternalSSO(mapping.Organization)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		if usesSSO {
+			return trace.AccessDenied(
+				"Github organization %s uses external SSO, please purchase a Teleport Enterprise license if you want to authenticate with this organization",
+				mapping.Organization,
+			)
+		}
+	}
+
+	return nil
+}
+
 // MapClaims returns a list of logins based on the provided claims,
 // returns a list of logins and list of kubernetes groups
 func (c *GithubConnectorV3) MapClaims(claims GithubClaims) ([]string, []string, []string) {
@@ -280,6 +321,33 @@ func (c *GithubConnectorV3) MapClaims(claims GithubClaims) ([]string, []string, 
 		}
 	}
 	return utils.Deduplicate(roles), utils.Deduplicate(kubeGroups), utils.Deduplicate(kubeUsers)
+}
+
+// checkOrgExternalSSO returns true if the Github organization is a Github
+// Enterprise Cloud organization that has external SSO enabled. SSO is a
+// Teleport Enterprise feature so it should not be allowed for OSS.
+func checkOrgExternalSSO(org string) (bool, error) {
+	// A Github organization will have a "sso" page reachable if it
+	// supports external SSO. There doesn't seem to be any way to get this
+	// information from the Github REST API without being an owner of the
+	// Github organization, so check if this exists instead.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	url := fmt.Sprintf("%s/%s/%s", githubOrgsURL, url.PathEscape(org), "sso")
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == 200, nil
 }
 
 // SetExpiry sets expiry time for the object
