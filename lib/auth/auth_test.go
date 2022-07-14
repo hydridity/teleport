@@ -40,6 +40,7 @@ import (
 	apidefaults "github.com/gravitational/teleport/api/defaults"
 	"github.com/gravitational/teleport/api/types"
 	apievents "github.com/gravitational/teleport/api/types/events"
+	"github.com/gravitational/teleport/api/types/installers"
 	"github.com/gravitational/teleport/api/utils/sshutils"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
@@ -1995,4 +1996,33 @@ func TestFilterResources(t *testing.T) {
 			tt.errorAssertion(t, err)
 		})
 	}
+}
+
+func TestInstallerCRUD(t *testing.T) {
+	t.Parallel()
+	s := newAuthSuite(t)
+	ctx := context.Background()
+
+	require.NoError(t, initSetDefaultInstaller(ctx, s.a))
+
+	inst, err := s.a.GetInstaller(ctx)
+	require.NoError(t, err)
+	require.Equal(t, installers.DefaultInstaller.GetScript(), inst.GetScript())
+
+	contents := "#! just some script contents"
+	inst.SetScript(contents)
+
+	require.NoError(t, s.a.SetInstaller(ctx, inst))
+
+	inst, err = s.a.GetInstaller(ctx)
+	require.NoError(t, err)
+	require.Equal(t, contents, inst.GetScript())
+
+	// resets to the default installer
+	err = s.a.DeleteInstaller(ctx)
+	require.NoError(t, err)
+
+	inst, err = s.a.GetInstaller(ctx)
+	require.NoError(t, err)
+	require.Equal(t, installers.DefaultInstaller.GetScript(), inst.GetScript())
 }
