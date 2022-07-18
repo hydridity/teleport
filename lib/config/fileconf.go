@@ -1186,6 +1186,9 @@ type AWSMatcher struct {
 	// SSMDocument is the ssm command document to execute for EC2
 	// installation
 	SSMDocument string `yaml:"ssm_command_document"`
+	// SSMParameters are a list of parameters to include when executing
+	// the EC2 command
+	SSMParameters map[string]string `yaml:"ssm_document_params,omitempty"`
 }
 
 // Database represents a single database proxied by the service.

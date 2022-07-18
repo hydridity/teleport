@@ -40,6 +40,8 @@ type AWSMatcher struct {
 	// SSMDocument is the SSM document used to execute the
 	// installation script
 	SSMDocument string
+	// SSMParameters are a list of parameters to include when executing the SSM document
+	SSMParameters map[string]string
 }
 
 // MatchResourceLabels returns true if any of the provided selectors matches the provided database.
