@@ -13,3 +13,11 @@ dependencies:
   - name: teleport-operator
     version: *version
     condition: installCRDs,operator.enabled
+  - name: etcd
+    version: 8.2.0
+    condition: chartMode.custom
+    repository: https://charts.bitnami.com/bitnami
+  - name: minio
+    version: 4.0.2
+    condition: chartMode.custom
+    repository: https://charts.min.io/
