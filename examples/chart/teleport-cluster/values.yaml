@@ -88,6 +88,18 @@ persistence:
   volumeSize: 10Gi
 
 ##################################################
+# On prem Minio/ETCD stack specific settings (only used in "custom" mode)
+##################################################
+custom:
+  etcd:
+    username: ""
+    password_file: ""
+    prefix: ""
+    insecure: true
+  audit:
+    uri: ""
+
+##################################################
 # AWS-specific settings (only used in "aws" mode)
 ##################################################
 aws:
