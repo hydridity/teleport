@@ -99,6 +99,48 @@ custom:
   audit:
     uri: ""
 
+etcd:
+  replicaCount: 1
+  auth:
+    rbac:
+      allowNoneAuthentication: true
+    client:
+      useAutoTLS: false
+      enableAuthentication: false
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+  disasterRecovery:
+    enabled: false
+    historyLimit: 3
+    pvc:
+      storageClassName: longhorn
+
+minio:
+  mode: standalone
+  rootUser: "admin"
+  rootPassword: "testovacieheslo"
+  driverPerNode: 1
+  replicas: 1
+  pools: 1
+  persistence:
+    size: 5Gi
+  ingress:
+    enabled: true
+    annotations:
+    hosts:
+      - teleport-minio.irineva.nyara.network
+  consoleIngress:
+    enabled: true
+    hosts:
+      - console.teleport-minio.irineva.nyara.network
+  resources:
+    requests:
+      memory: 1Gi
+
+
 ##################################################
 # AWS-specific settings (only used in "aws" mode)
 ##################################################
