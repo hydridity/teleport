@@ -27,6 +27,7 @@ data:
         prefix: {{ .Values.custom.etcd.prefix | default "/teleport/" }}
         username: {{ .Values.custom.etcd.username | default "root" }}
         password_file: {{ .Values.custom.etcd.password_file | default "/etc/teleport-password" }}
+        peers: ["http://test-etcd.teleport.svc.cluster.local:2379"]
         {{ if eq .Values.custom.etcd.insecure true }}
         insecure: true
         {{ end }}
